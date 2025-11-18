@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>EcoPuntos | Reciclaje con QR</title>
+		<meta name="description" content="Escanea el QR del basurero inteligente, acumula puntos por reciclar y canjéalos en locales aliados." />
+		<link rel="preconnect" href="https://unpkg.com" />
+		<style>
+			:root {
+				--bg: #0f172a;
+				--card: #111827;
+				--muted: #94a3b8;
+				--text: #e5e7eb;
+				--accent: #22c55e;
+				--accent-2: #14b8a6;
+				--danger: #ef4444;
+				--warning: #f59e0b;
+				--border: #1f2937;
+			}
+			* { box-sizing: border-box; }
+			html, body { height: 100%; }
+			body {
+				margin: 0;
+				font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+				background: linear-gradient(180deg, #0b1220, var(--bg));
+				color: var(--text);
+			}
+			.container {
+				max-width: 1100px;
+				margin: 0 auto;
+				padding: 20px 12px 64px;
+			}
+			header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 12px;
+				padding: 16px;
+				border: 1px solid var(--border);
+				background: radial-gradient(1200px 400px at -600px -200px, #115e5922, transparent 60%), var(--card);
+				border-radius: 16px;
+			}
+			.brand {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+			}
+			.logo {
+				width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+				background: linear-gradient(135deg, var(--accent), var(--accent-2));
+				color: #053b2a; font-weight: 900;
+			}
+			.brand h1 { font-size: 18px; margin: 0; letter-spacing: 0.3px; }
+			.brand p { margin: 0; color: var(--muted); font-size: 12px; }
+			.user-card {
+				display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border);
+				background: #0c1322; border-radius: 12px;
+			}
+			.avatar { width: 36px; height: 36px; border-radius: 999px; display: grid; place-items: center; font-weight: 700; background: #172036; border: 1px solid var(--border); }
+			.user-meta { display: flex; flex-direction: column; }
+			.user-meta small { color: var(--muted); }
+			.points { font-weight: 800; color: var(--accent); }
+			.btn { cursor: pointer; border: 1px solid var(--border); background: #0b1220; color: var(--text); padding: 8px 12px; border-radius: 10px; transition: 150ms; }
+			.btn:hover { background: #0f1830; }
+			.btn.primary { background: linear-gradient(135deg, #16a34a, #0ea5e9); border: none; color: white; }
+			.btn.primary:hover { filter: brightness(1.05); }
+			.btn.danger { background: #1b0f12; border-color: #3a1418; color: #fecaca; }
+			.btn.ghost { background: transparent; border-color: #243045; color: var(--muted); }
+			.btn.ghost:hover { background: #0d1526; color: var(--text); }
+			.hidden { display: none !important; }
+			.grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; margin-top: 16px; }
+			@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+			.card { border: 1px solid var(--border); background: var(--card); border-radius: 16px; padding: 16px; }
+			.card h2 { margin: 0 0 12px 0; font-size: 18px; }
+			.muted { color: var(--muted); }
+			.small { font-size: 12px; }
+			.stack { display: flex; flex-direction: column; gap: 10px; }
+			.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+			.between { justify-content: space-between; }
+			.offer { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px dashed #224; padding: 12px; border-radius: 12px; background: #0b1426; }
+			.pill { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #13203e; color: #93c5fd; font-size: 12px; border: 1px solid #1f2b4a; }
+			.voucher { border: 1px dashed #2a3b1f; background: #0e1a10; padding: 10px; border-radius: 12px; color: #bbf7d0; }
+			.section-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+			.kpi {
+				display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px;
+			}
+			.kpi .tile { border: 1px solid var(--border); background: #0c1526; padding: 12px; border-radius: 12px; }
+			.kpi .tile h3 { margin: 0; font-size: 12px; color: var(--muted); }
+			.kpi .tile p { margin: 4px 0 0 0; font-size: 20px; font-weight: 800; }
+			.qr-container { display: none; margin-top: 12px; }
+			.qr-container.active { display: block; }
+			#qr-reader { width: 100%; }
+			.toast { position: fixed; right: 16px; bottom: 16px; background: #062a1a; color: #bbf7d0; border: 1px solid #155e3a; padding: 12px 14px; border-radius: 12px; box-shadow: 0 10px 30px #0006; display: none; }
+			.form-inline { display: flex; align-items: center; gap: 8px; }
+			input[type="text"] { background: #0b1220; border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 8px; min-width: 200px; }
+			.h3-section { margin: 16px 0 8px 0; }
+			.mt-16 { margin-top: 16px; }
+
+			/* ---------- Responsive ---------- */
+			@media (max-width: 900px) {
+				header { flex-direction: column; align-items: stretch; }
+				.user-card { width: 100%; justify-content: space-between; }
+			}
+			@media (max-width: 640px) {
+				.container { padding: 16px 10px 56px; }
+				.brand h1 { font-size: 16px; }
+				.brand p { font-size: 11px; }
+				.btn { padding: 10px 12px; }
+				.kpi { grid-template-columns: repeat(2, 1fr); }
+				.offer { flex-direction: column; align-items: stretch; }
+				.offer .row { justify-content: space-between; }
+				.form-inline { flex-direction: column; align-items: stretch; }
+				.form-inline input[type="text"] { min-width: 0; width: 100%; }
+				.form-inline .btn { width: 100%; }
+			}
+			@media (max-width: 400px) {
+				.kpi { grid-template-columns: 1fr; }
+				.row { gap: 8px; }
+				.card { padding: 14px; }
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<header>
+				<div class="brand">
+					<div class="logo">♻</div>
+					<div>
+						<h1>EcoPuntos</h1>
+						<p>Recicla con QR y canjea en locales aliados</p>
+					</div>
+				</div>
+				<div class="user-card" id="userCard">
+					<div class="avatar" id="userAvatar">U</div>
+					<div class="user-meta">
+						<strong id="userName">Usuario</strong>
+						<small><span class="muted">Puntos:</span> <span class="points" id="userPoints">0</span></small>
+					</div>
+					<button class="btn" id="btnChangeUser" title="Cambiar usuario">Cambiar</button>
+				</div>
+			</header>
+
+			<div class="grid">
+				<section class="card">
+					<div class="section-title">
+						<h2>Escanear QR del basurero</h2>
+						<div class="row">
+							<button class="btn primary" id="btnStartScan">Iniciar escáner</button>
+							  <button class="btn hidden" id="btnStopScan">Detener</button>
+							  <button class="btn ghost" id="btnSutil" title="Ganar 30 puntos">sutil</button>
+						</div>
+					</div>
+					<p class="muted">Permite acceso a la cámara para leer el QR del basurero inteligente. Al escanear, sumamos puntos a tu cuenta.</p>
+					<div class="qr-container" id="qrContainer">
+						<div id="qr-reader"></div>
+					</div>
+
+					<div class="kpi">
+						<div class="tile">
+							<h3>Usuario actual</h3>
+							<p id="kpiUser">-</p>
+						</div>
+						<div class="tile">
+							<h3>Puntos acumulados</h3>
+							<p id="kpiPoints">0</p>
+						</div>
+						<div class="tile">
+							<h3>Último crédito</h3>
+							<p id="kpiLast">0</p>
+						</div>
+					</div>
+				</section>
+
+				<aside class="card">
+					<div class="section-title">
+						<h2>Canjear mis puntos</h2>
+						<span class="pill" id="balancePill">Saldo: 0</span>
+					</div>
+					<div class="stack" id="offersList"></div>
+
+					  <h3 class="h3-section">Mis canjes</h3>
+					<div class="stack" id="redemptionsList">
+						<p class="muted" id="noRedemptions">Aún no tienes canjes. ¡Escanea y acumula!</p>
+					</div>
+				</aside>
+			</div>
+
+			<section class="card mt-16">
+				<h2>Iniciar / cambiar usuario</h2>
+				<p class="muted">Usa un apodo o tu nombre. Se guardará localmente en este dispositivo.</p>
+				<div class="form-inline">
+					<input type="text" id="inputUser" placeholder="Ej: Ana, Luis, RecyclePro" />
+					<button class="btn" id="btnSetUser">Usar este usuario</button>
+					<button class="btn danger" id="btnReset">Reiniciar datos locales</button>
+				</div>
+			</section>
+		</div>
+
+		<div class="toast" id="toast"></div>
+
+		<script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
+		<script>
+			// ----- Estado y persistencia -----
+			const LS_USERS = 'ecopuntos_users';
+			const LS_CURRENT = 'ecopuntos_current_user';
+
+			function getUsers() {
+				try { return JSON.parse(localStorage.getItem(LS_USERS)) || {}; } catch { return {}; }
+			}
+			function saveUsers(users) {
+				localStorage.setItem(LS_USERS, JSON.stringify(users));
+			}
+			function getCurrentUserName() {
+				return localStorage.getItem(LS_CURRENT) || '';
+			}
+			function setCurrentUserName(name) {
+				localStorage.setItem(LS_CURRENT, name);
+			}
+			function ensureUser(users, name) {
+				if (!users[name]) users[name] = { points: 0, redemptions: [] };
+				return users[name];
+			}
+
+			// ----- Utilidades -----
+			function showToast(msg, type = 'ok') {
+				const el = document.getElementById('toast');
+				el.textContent = msg;
+				el.style.display = 'block';
+				el.style.background = type === 'err' ? '#2a0e12' : (type === 'warn' ? '#2a220e' : '#062a1a');
+				el.style.borderColor = type === 'err' ? '#7f1d1d' : (type === 'warn' ? '#78350f' : '#155e3a');
+				setTimeout(() => el.style.display = 'none', 3000);
+			}
+			function randomAlnum(n) {
+				const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+				let s = '';
+				for (let i = 0; i < n; i++) s += chars[Math.floor(Math.random() * chars.length)];
+				return s;
+			}
+
+			// ----- Ofertas -----
+			const OFFERS = [
+				{ id: 'cafe-peq-castano-10', name: 'cafe pequeño castaño', reward: '10% de descuento', cost: 50 },
+				{ id: 'bmarket-bolsa', name: 'B market', reward: 'Cualquier producto 20% desc', cost: 150 },
+				{ id: 'movilidad-30', name: 'Movilidad Urbana', reward: '30 min e-scooter', cost: 200 },
+				{ id: 'cine-verde', name: 'Cine Verde', reward: 'Entrada 2x1', cost: 180 },
+			];
+
+			// ----- QR: parsing de puntos -----
+			function extractPointsFromQr(text) {
+				let params = new URLSearchParams();
+				try {
+					// Soporta URL completas
+					const u1 = new URL(text);
+					params = u1.searchParams;
+				} catch {
+					// Soporta strings tipo query o rutas
+					try {
+						const base = window.location.origin;
+						const u2 = new URL(text.startsWith('?') ? text : (text.includes('?') ? text : ('/?q=' + encodeURIComponent(text))), base);
+						params = u2.searchParams;
+					} catch {}
+				}
+				const keys = ['points', 'puntos', 'pts', 'credit', 'cantidad', 'amount'];
+				for (const k of keys) {
+					const v = params.get(k);
+					if (v !== null) {
+						const n = parseInt(v, 10);
+						if (!isNaN(n) && n > 0) return n;
+					}
+				}
+				// Regex de fallback: X=PUNTOS o PTS=X
+				const m = text.match(/(?:puntos|pts)\s*[=:\-]\s*(\d{1,6})/i);
+				if (m) {
+					const n = parseInt(m[1], 10);
+					if (!isNaN(n) && n > 0) return n;
+				}
+				// Heurística por contenido
+				if (/smart\s*bin|basurero|bin=|contenedor/i.test(text)) return 10;
+				return 5; // último recurso
+			}
+
+			// ----- UI dinámico -----
+			const elUserName = document.getElementById('userName');
+			const elUserPoints = document.getElementById('userPoints');
+			const elAvatar = document.getElementById('userAvatar');
+			const elKpiUser = document.getElementById('kpiUser');
+			const elKpiPoints = document.getElementById('kpiPoints');
+			const elKpiLast = document.getElementById('kpiLast');
+			const elOffers = document.getElementById('offersList');
+			const elRedemptions = document.getElementById('redemptionsList');
+			const elNoRedemptions = document.getElementById('noRedemptions');
+			const elBalancePill = document.getElementById('balancePill');
+
+			function renderOffers(currentPoints) {
+				elOffers.innerHTML = '';
+				OFFERS.forEach(of => {
+					const row = document.createElement('div');
+					row.className = 'offer';
+					row.innerHTML = `
+						<div>
+							<strong>${of.name}</strong><br />
+							<span class="muted">${of.reward}</span>
+						</div>
+						<div class="row">
+							<span class="pill">Costo: ${of.cost} pts</span>
+							<button class="btn ${currentPoints >= of.cost ? 'primary' : ''}" data-offer="${of.id}" ${currentPoints < of.cost ? 'disabled' : ''}>Canjear</button>
+						</div>`;
+					elOffers.appendChild(row);
+				});
+			}
+
+			function renderRedemptions(user) {
+				elRedemptions.innerHTML = '';
+				if (!user.redemptions || user.redemptions.length === 0) {
+					elRedemptions.appendChild(elNoRedemptions);
+					elNoRedemptions.style.display = 'block';
+					return;
+				}
+				elNoRedemptions.style.display = 'none';
+				user.redemptions.slice().reverse().forEach(r => {
+					const div = document.createElement('div');
+					div.className = 'voucher';
+					const dt = new Date(r.date);
+					div.innerHTML = `
+						<div class="row between">
+							<div>
+								<strong>${r.offerName}</strong> · <span class="muted">${r.reward}</span>
+								<div class="muted small">${dt.toLocaleString()}</div>
+							</div>
+							<div class="pill">Código: ${r.code}</div>
+						</div>`;
+					elRedemptions.appendChild(div);
+				});
+			}
+
+			function firstLetter(name) {
+				const t = (name || 'U').trim();
+				return t ? t[0].toUpperCase() : 'U';
+			}
+
+			function updateUI(lastCredit = 0) {
+				const users = getUsers();
+				const name = getCurrentUserName() || 'Invitado';
+				const user = ensureUser(users, name);
+				elUserName.textContent = name;
+				elUserPoints.textContent = user.points;
+				elAvatar.textContent = firstLetter(name);
+				elKpiUser.textContent = name;
+				elKpiPoints.textContent = user.points;
+				elKpiLast.textContent = lastCredit;
+				elBalancePill.textContent = `Saldo: ${user.points}`;
+				renderOffers(user.points);
+				renderRedemptions(user);
+			}
+
+			// ----- Escáner QR -----
+			let scanner = null;
+			let scannerActive = false;
+			const elQrContainer = document.getElementById('qrContainer');
+			const elBtnStart = document.getElementById('btnStartScan');
+			const elBtnStop = document.getElementById('btnStopScan');
+
+			function getQrBoxSize() {
+				const holder = document.getElementById('qr-reader');
+				const w = holder ? holder.clientWidth : window.innerWidth * 0.9;
+				const size = Math.max(200, Math.min(320, Math.floor(w * 0.9)));
+				return { width: size, height: size };
+			}
+
+			async function startScanner() {
+				if (scannerActive) return;
+				elQrContainer.classList.add('active');
+				elBtnStart.classList.add('hidden');
+				elBtnStop.classList.remove('hidden');
+				// Usa el componente con UI incluida (también ofrece subir imagen)
+				const config = { fps: 10, qrbox: getQrBoxSize(), rememberLastUsedCamera: true, showTorchButtonIfSupported: true };
+				const verbose = false;
+				scanner = new Html5QrcodeScanner('qr-reader', config, verbose);
+				scanner.render(onScanSuccess, onScanError);
+				scannerActive = true;
+			}
+			function stopScanner() {
+				if (!scannerActive) return;
+				// Html5QrcodeScanner no expone stop directo; destruimos el contenedor y reiniciamos la UI
+				const holder = document.getElementById('qr-reader');
+				holder.innerHTML = '';
+				scanner.clear && scanner.clear();
+				scanner = null;
+				scannerActive = false;
+				elQrContainer.classList.remove('active');
+				elBtnStart.classList.remove('hidden');
+				elBtnStop.classList.add('hidden');
+			}
+
+			function onScanSuccess(decodedText) {
+				// Procesar, acreditar y detener
+				const credit = extractPointsFromQr(decodedText);
+				const users = getUsers();
+				const name = getCurrentUserName() || 'Invitado';
+				const user = ensureUser(users, name);
+				user.points = (user.points || 0) + credit;
+				saveUsers(users);
+				updateUI(credit);
+				showToast(`¡+${credit} puntos acreditados!`, 'ok');
+				stopScanner();
+			}
+			function onScanError(err) {
+				// Sin ruido; se llama seguido. Podemos mostrar problemas puntuales.
+			}
+
+			// ----- Canjes -----
+			elOffers.addEventListener('click', (e) => {
+				const btn = e.target.closest('button[data-offer]');
+				if (!btn) return;
+				const offerId = btn.getAttribute('data-offer');
+				const offer = OFFERS.find(o => o.id === offerId);
+				const users = getUsers();
+				const name = getCurrentUserName() || 'Invitado';
+				const user = ensureUser(users, name);
+				if (user.points < offer.cost) {
+					showToast('No tienes puntos suficientes para este canje', 'warn');
+					return;
+				}
+				user.points -= offer.cost;
+				const code = `ECO-${randomAlnum(4)}-${randomAlnum(4)}`;
+				user.redemptions.push({ offerId: offer.id, offerName: offer.name, reward: offer.reward, code, date: new Date().toISOString() });
+				saveUsers(users);
+				updateUI(0);
+				showToast(`Canje realizado: código ${code}`, 'ok');
+			});
+
+			// ----- Botón sutil: agrega 30 puntos -----
+			document.getElementById('btnSutil').addEventListener('click', () => {
+				const users = getUsers();
+				const name = getCurrentUserName() || 'Invitado';
+				const user = ensureUser(users, name);
+				user.points = (user.points || 0) + 30;
+				saveUsers(users);
+				updateUI(30);
+				showToast('Felicidades, ganaste 30 puntos');
+			});
+
+			// ----- Usuario: set/cambiar y reset -----
+			document.getElementById('btnSetUser').addEventListener('click', () => {
+				const input = document.getElementById('inputUser');
+				const name = (input.value || '').trim();
+				if (!name) { showToast('Ingresa un nombre de usuario', 'warn'); return; }
+				const users = getUsers();
+				ensureUser(users, name);
+				saveUsers(users);
+				setCurrentUserName(name);
+				updateUI(0);
+				showToast(`Usuario activo: ${name}`);
+			});
+			document.getElementById('btnChangeUser').addEventListener('click', () => {
+				const name = prompt('Cambiar a usuario:', getCurrentUserName() || '');
+				if (!name) return;
+				const users = getUsers();
+				ensureUser(users, name.trim());
+				saveUsers(users);
+				setCurrentUserName(name.trim());
+				updateUI(0);
+			});
+			document.getElementById('btnReset').addEventListener('click', () => {
+				if (confirm('Esto borrará todos los datos locales de EcoPuntos en este navegador. ¿Continuar?')) {
+					localStorage.removeItem(LS_USERS);
+					localStorage.removeItem(LS_CURRENT);
+					updateUI(0);
+					showToast('Datos locales reiniciados', 'warn');
+				}
+			});
+
+			// ----- Escáner: controles -----
+			elBtnStart.addEventListener('click', startScanner);
+			elBtnStop.addEventListener('click', stopScanner);
+
+			// ----- Bootstrap -----
+			(function init() {
+				// Usuario por defecto si no existe
+				if (!getCurrentUserName()) {
+					setCurrentUserName('Invitado');
+					const users = getUsers();
+					ensureUser(users, 'Invitado');
+					saveUsers(users);
+				}
+				updateUI(0);
+			})();
+		</script>
+	</body>
+</html>
+
